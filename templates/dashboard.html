@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AWS Image Processing Dashboard</title>
+
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+
+    <style>
+      body {
+        background: #f4f6f9;
+        font-family: Arial, sans-serif;
+      }
+
+      .sidebar {
+        min-height: 100vh;
+        background: #172033;
+        color: white;
+        padding: 25px 18px;
+      }
+
+      .sidebar h4 {
+        margin-bottom: 35px;
+      }
+
+      .sidebar a {
+        display: block;
+        color: #cbd5e1;
+        text-decoration: none;
+        padding: 12px;
+        border-radius: 6px;
+        margin-bottom: 8px;
+      }
+
+      .sidebar a.active,
+      .sidebar a:hover {
+        background: #263650;
+        color: white;
+      }
+
+      .main-content {
+        padding: 30px;
+      }
+
+      .stat-card {
+        border: none;
+        border-radius: 12px;
+        padding: 22px;
+        box-shadow: 0 3px 12px rgba(0, 0, 0, 0.05);
+      }
+
+      .image-card {
+        border: none;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 3px 12px rgba(0, 0, 0, 0.06);
+        height: 100%;
+      }
+
+      .image-preview {
+        width: 100%;
+        height: 190px;
+        object-fit: contain;
+        background: #eef1f5;
+      }
+
+      .image-section {
+        background: #f8fafc;
+        padding: 10px;
+        border-radius: 8px;
+      }
+
+      .compression-box {
+        background: #f8fafc;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 14px;
+      }
+
+      .metric-value {
+        font-size: 15px;
+        font-weight: bold;
+      }
+
+      .action-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      @media (max-width: 768px) {
+        .sidebar {
+          min-height: auto;
+        }
+
+        .main-content {
+          padding: 18px;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container-fluid">
+      <div class="row">
+        <!-- SIDEBAR -->
+        <aside class="col-md-2 sidebar">
+          <h4>AWS Image System</h4>
+
+          <a href="{{ url_for('dashboard') }}" class="active"> Dashboard </a>
+
+          <a href="{{ url_for('home') }}"> Upload Image </a>
+
+          <a href="#">AWS S3 Storage</a>
+          <a href="#">AWS Lambda Processing</a>
+          <a href="#">Amazon RDS Database</a>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="col-md-10 main-content">
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+              <h2>Dashboard Overview</h2>
+              <p class="text-muted mb-0">
+                Manage your uploaded and processed images.
+              </p>
+            </div>
+
+            <a href="{{ url_for('home') }}" class="btn btn-primary">
+              + Upload Image
+            </a>
+          </div>
+
+          <!-- FLASH MESSAGES -->
+          {% with messages = get_flashed_messages(with_categories=true) %} {%
+          for category, message in messages %}
+          <div class="alert alert-{{ category }} alert-dismissible fade show">
+            {{ message }}
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="alert"
+            ></button>
+          </div>
+          {% endfor %} {% endwith %}
+
+          <!-- DASHBOARD STATISTICS -->
+          <div class="row g-3 mb-4">
+            <div class="col-md-4">
+              <div class="card stat-card">
+                <h6 class="text-muted">Total Images</h6>
+                <h2>{{ images|length }}</h2>
+              </div>
+            </div>
+
+            <div class="col-md-4">
+              <div class="card stat-card">
+                <h6 class="text-muted">Completed</h6>
+                <h2>
+                  {{ images|selectattr('status', 'equalto',
+                  'COMPLETED')|list|length }}
+                </h2>
+              </div>
+            </div>
+
+            <div class="col-md-4">
+              <div class="card stat-card">
+                <h6 class="text-muted">Processing</h6>
+                <h2>
+                  {{ images|selectattr('status', 'equalto',
+                  'PROCESSING')|list|length }}
+                </h2>
+              </div>
+            </div>
+          </div>
+
+          <!-- SEARCH AND FILTER -->
+          <div class="card border-0 p-3 mb-4">
+            <input
+              type="text"
+              id="searchInput"
+              class="form-control"
+              placeholder="Search images by filename..."
+            />
+
+            <div class="mt-3">
+              <button class="btn btn-dark btn-sm filter-btn" data-filter="all">
+                All
+              </button>
+
+              <button
+                class="btn btn-success btn-sm filter-btn"
+                data-filter="COMPLETED"
+              >
+                Completed
+              </button>
+
+              <button
+                class="btn btn-warning btn-sm filter-btn"
+                data-filter="PROCESSING"
+              >
+                Processing
+              </button>
+            </div>
+          </div>
+
+          <!-- IMAGE CARDS -->
+          <div class="row g-4" id="imageContainer">
+            {% for image in images %}
+
+            <div
+              class="col-md-6 col-xl-4 image-item"
+              data-status="{{ image.status }}"
+              data-filename="{{ image.original_filename|lower }}"
+            >
+              <div class="card image-card">
+                <div class="card-body">
+                  <div class="d-flex justify-content-between mb-3">
+                    <span class="badge bg-secondary"> ID: {{ image.id }} </span>
+
+                    {% if image.status == 'COMPLETED' %}
+                    <span class="badge bg-success"> COMPLETED </span>
+                    {% else %}
+                    <span class="badge bg-warning text-dark"> PROCESSING </span>
+                    {% endif %}
+                  </div>
+
+                  <h6 class="text-truncate">{{ image.original_filename }}</h6>
+
+                  <!-- ORIGINAL IMAGE -->
+                  <div class="image-section mb-3">
+                    <p class="fw-bold small mb-2">Original Image</p>
+
+                    <img
+                      src="{{ image.original_url }}"
+                      class="image-preview"
+                      alt="Original image"
+                    />
+
+                    <a
+                      href="{{ url_for('download_original', image_id=image.id) }}"
+                      class="btn btn-outline-primary btn-sm w-100 mt-2"
+                    >
+                      Download Original
+                    </a>
+                  </div>
+
+                  <!-- PROCESSED IMAGE -->
+                  <div class="image-section mb-3">
+                    <p class="fw-bold small mb-2">Processed Image</p>
+
+                    {% if image.processed_url %}
+
+                    <img
+                      src="{{ image.processed_url }}"
+                      class="image-preview"
+                      alt="Processed image"
+                    />
+
+                    <a
+                      href="{{ url_for('download_processed', image_id=image.id) }}"
+                      class="btn btn-outline-success btn-sm w-100 mt-2"
+                    >
+                      Download Processed
+                    </a>
+
+                    {% else %}
+
+                    <div
+                      class="image-preview d-flex align-items-center justify-content-center"
+                    >
+                      <span class="text-muted">
+                        Waiting for processing...
+                      </span>
+                    </div>
+
+                    {% endif %}
+                  </div>
+
+                  <!-- COMPRESSION STATISTICS -->
+                  <div class="compression-box mb-3">
+                    <h6 class="fw-bold mb-3">
+                      <i class="bi bi-speedometer2"></i>
+                      Compression Statistics
+                    </h6>
+
+                    {% if image.processed_size is not none and
+                    image.original_size is not none %}
+
+                    <div class="d-flex justify-content-between mb-2">
+                      <span class="text-muted small"> Original Size </span>
+
+                      <span class="metric-value">
+                        {{ "%.2f"|format(image.original_size / 1024) }} KB
+                      </span>
+                    </div>
+
+                    <div class="d-flex justify-content-between mb-2">
+                      <span class="text-muted small"> Processed Size </span>
+
+                      <span class="metric-value">
+                        {{ "%.2f"|format(image.processed_size / 1024) }} KB
+                      </span>
+                    </div>
+
+                    <hr />
+
+                    {% set size_difference = image.original_size -
+                    image.processed_size %} {% if size_difference > 0 %}
+
+                    <div class="d-flex justify-content-between mb-2">
+                      <span class="text-success small"> Storage Saved </span>
+
+                      <span class="metric-value text-success">
+                        {{ "%.2f"|format(size_difference / 1024) }} KB
+                      </span>
+                    </div>
+
+                    {% elif size_difference < 0 %}
+
+                    <div class="d-flex justify-content-between mb-2">
+                      <span class="text-danger small"> Size Increased </span>
+
+                      <span class="metric-value text-danger">
+                        {{ "%.2f"|format((-size_difference) / 1024) }} KB
+                      </span>
+                    </div>
+
+                    {% else %}
+
+                    <div class="d-flex justify-content-between mb-2">
+                      <span class="text-muted small"> Size Change </span>
+
+                      <span class="metric-value"> No change </span>
+                    </div>
+
+                    {% endif %}
+
+                    <div class="d-flex justify-content-between mt-2">
+                      <span class="text-muted small">
+                        Compression Percentage
+                      </span>
+
+                      <span
+                        class="metric-value {% if image.compression_percentage >= 0 %} text-success {% else %} text-danger {% endif %}"
+                      >
+                        {{ image.compression_percentage }}%
+                      </span>
+                    </div>
+
+                    {% else %}
+
+                    <p class="text-muted small mb-0">
+                      Compression statistics will appear after processing is
+                      completed.
+                    </p>
+
+                    {% endif %}
+                  </div>
+
+                  <!-- UPLOAD DATE -->
+                  <p class="text-muted small">
+                    Uploaded: {{ image.uploaded_at }}
+                  </p>
+
+                  <!-- DELETE BUTTON -->
+                  <form
+                    action="{{ url_for('delete_image', image_id=image.id) }}"
+                    method="POST"
+                    onsubmit="
+                      return confirm(
+                        'Are you sure you want to permanently delete this image and its S3 files?',
+                      );
+                    "
+                  >
+                    <button type="submit" class="btn btn-danger btn-sm w-100">
+                      Delete Image
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </div>
+
+            {% else %}
+
+            <div class="col-12">
+              <div class="card border-0 p-5 text-center">
+                <h5>No images uploaded yet</h5>
+
+                <p class="text-muted">Upload an image to see it here.</p>
+              </div>
+            </div>
+
+            {% endfor %}
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+      const searchInput = document.getElementById("searchInput");
+      const filterButtons = document.querySelectorAll(".filter-btn");
+      const imageItems = document.querySelectorAll(".image-item");
+
+      let currentFilter = "all";
+
+      function filterImages() {
+        const searchText = searchInput.value.toLowerCase();
+
+        imageItems.forEach((item) => {
+          const filename = item.dataset.filename;
+          const status = item.dataset.status;
+
+          const matchesSearch = filename.includes(searchText);
+
+          const matchesFilter =
+            currentFilter === "all" || status === currentFilter;
+
+          item.style.display = matchesSearch && matchesFilter ? "" : "none";
+        });
+      }
+
+      searchInput.addEventListener("input", filterImages);
+
+      filterButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+          currentFilter = button.dataset.filter;
+          filterImages();
+        });
+      });
+    </script>
+  </body>
+</html>
