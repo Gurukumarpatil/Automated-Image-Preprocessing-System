@@ -34,6 +34,10 @@ ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
 def home():
      return redirect(url_for("dashboard"))
 
+@app.route("/upload", methods=["GET"])
+def upload_page():
+    return render_template("index.html")
+
 
 # ---------------------------------
 # IMAGE UPLOAD
