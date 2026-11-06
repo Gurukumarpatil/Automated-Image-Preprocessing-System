@@ -1,6 +1,7 @@
 
 import os
 import uuid
+import mimetypes
 from io import BytesIO
 
 import boto3
@@ -9,6 +10,7 @@ from flask import (
     Flask, render_template, request,
     send_file, redirect, url_for, flash, abort
 )
+
 from werkzeug.utils import secure_filename
 from config import Config
 from PIL import Image, UnidentifiedImageError
@@ -19,7 +21,11 @@ from botocore.exceptions import ClientError
 app = Flask(__name__)
 app.config.from_object(Config)
 
-# AWS S3 connection
+
+# ---------------------------------
+# AWS S3 CONNECTION
+# ---------------------------------
+
 s3 = boto3.client(
     "s3",
     region_name=os.getenv("AWS_REGION")
@@ -30,9 +36,54 @@ BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
 ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
 
 
+# ---------------------------------
+# FIND PROCESSED IMAGE
+# ---------------------------------
+
+def find_processed_image(original_s3_key):
+
+    filename = os.path.basename(original_s3_key)
+    name, extension = os.path.splitext(filename)
+
+    candidates = [
+        f"processed/{name}.jpg",
+        f"processed/{name}{extension.lower()}"
+    ]
+
+    for key in dict.fromkeys(candidates):
+
+        try:
+            s3.head_object(
+                Bucket=BUCKET_NAME,
+                Key=key
+            )
+
+            return key
+
+        except ClientError as error:
+
+            error_code = error.response.get(
+                "Error", {}
+            ).get("Code")
+
+            if error_code not in ("404", "NoSuchKey", "NotFound"):
+                raise
+
+    return None
+
+
+# ---------------------------------
+# HOME
+# ---------------------------------
+
 @app.route("/")
 def home():
-     return redirect(url_for("dashboard"))
+    return redirect(url_for("dashboard"))
+
+
+# ---------------------------------
+# UPLOAD PAGE
+# ---------------------------------
 
 @app.route("/upload", methods=["GET"])
 def upload_page():
@@ -64,6 +115,7 @@ def upload():
 
     # Validate image content
     try:
+
         image = Image.open(file.stream)
         image.verify()
         file.stream.seek(0)
@@ -73,7 +125,7 @@ def upload():
 
     filename = secure_filename(file.filename)
 
-    # Calculate original image size in bytes
+    # Calculate original image size
     file.stream.seek(0, 2)
     original_size = file.stream.tell()
     file.stream.seek(0)
@@ -81,26 +133,41 @@ def upload():
     s3_key = f"original/{uuid.uuid4().hex}_{filename}"
 
     try:
+
         # Upload original image to S3
         s3.upload_fileobj(
             file.stream,
             BUCKET_NAME,
             s3_key,
-            ExtraArgs={"ContentType": file.mimetype}
+            ExtraArgs={
+                "ContentType": file.mimetype
+            }
         )
 
         # Save metadata in RDS
         connection = get_db_connection()
 
         try:
+
             with connection.cursor() as cursor:
+
                 cursor.execute(
                     """
                     INSERT INTO images
-                    (original_filename, original_s3_key, status, original_size)
+                    (
+                        original_filename,
+                        original_s3_key,
+                        status,
+                        original_size
+                    )
                     VALUES (%s, %s, %s, %s)
                     """,
-                    (filename, s3_key, "PROCESSING", original_size)
+                    (
+                        filename,
+                        s3_key,
+                        "PROCESSING",
+                        original_size
+                    )
                 )
 
             connection.commit()
@@ -111,12 +178,16 @@ def upload():
         return redirect(url_for("dashboard"))
 
     except Exception:
-        app.logger.exception("Image upload or database operation failed")
+
+        app.logger.exception(
+            "Image upload or database operation failed"
+        )
+
         return "Upload failed. Check server logs.", 500
 
 
 # ---------------------------------
-# DASHBOARD WITH COMPRESSION STATS
+# DASHBOARD
 # ---------------------------------
 
 @app.route("/dashboard")
@@ -125,12 +196,15 @@ def dashboard():
     connection = get_db_connection()
 
     try:
+
         with connection.cursor() as cursor:
 
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT * FROM images
                 ORDER BY uploaded_at DESC
-            """)
+                """
+            )
 
             images = cursor.fetchall()
 
@@ -148,32 +222,28 @@ def dashboard():
                     ExpiresIn=3600
                 )
 
-                # Derive processed image key
-                filename = original_key.split("/")[-1].rsplit(".", 1)[0]
-                processed_key = f"processed/{filename}.jpg"
+                # Find processed image regardless of extension
+                processed_key = find_processed_image(original_key)
 
-                try:
-                    # Check whether Lambda created the processed image
+                if processed_key:
+
                     response = s3.head_object(
                         Bucket=BUCKET_NAME,
                         Key=processed_key
                     )
 
-                    # Get processed image size
                     processed_size = response["ContentLength"]
-
                     original_size = image["original_size"]
 
-                    # Calculate compression percentage
+                    # Calculate actual size reduction
                     if original_size and original_size > 0:
 
-                        compression_percentage = (
-                            (original_size - processed_size)
-                            / original_size
-                        ) * 100
-
                         compression_percentage = round(
-                            compression_percentage, 2
+                            (
+                                (original_size - processed_size)
+                                / original_size
+                            ) * 100,
+                            2
                         )
 
                     else:
@@ -184,6 +254,12 @@ def dashboard():
                     image["processed_size"] = processed_size
                     image["compression_percentage"] = compression_percentage
                     image["status"] = "COMPLETED"
+
+                    # Storage saved in bytes
+                    image["storage_saved"] = (
+                        original_size - processed_size
+                        if original_size else None
+                    )
 
                     # Generate processed image URL
                     image["processed_url"] = s3.generate_presigned_url(
@@ -196,41 +272,39 @@ def dashboard():
                     )
 
                     # Save processing information in RDS
-                    cursor.execute("""
+                    cursor.execute(
+                        """
                         UPDATE images
                         SET processed_s3_key = %s,
                             processed_size = %s,
                             compression_percentage = %s,
                             status = %s
                         WHERE id = %s
-                    """, (
-                        processed_key,
-                        processed_size,
-                        compression_percentage,
-                        "COMPLETED",
-                        image["id"]
-                    ))
+                        """,
+                        (
+                            processed_key,
+                            processed_size,
+                            compression_percentage,
+                            "COMPLETED",
+                            image["id"]
+                        )
+                    )
 
-                except ClientError as error:
+                else:
 
-                    error_code = error.response.get(
-                        "Error", {}
-                    ).get("Code")
-
-                    if error_code in ("404", "NoSuchKey", "NotFound"):
-
-                        image["processed_url"] = None
-                        image["status"] = "PROCESSING"
-
-                    else:
-                        raise
+                    image["processed_url"] = None
+                    image["processed_s3_key"] = None
+                    image["status"] = "PROCESSING"
 
             connection.commit()
 
     finally:
         connection.close()
 
-    return render_template("dashboard.html", images=images)
+    return render_template(
+        "dashboard.html",
+        images=images
+    )
 
 
 # ---------------------------------
@@ -243,11 +317,14 @@ def download_original(image_id):
     connection = get_db_connection()
 
     try:
+
         with connection.cursor() as cursor:
+
             cursor.execute(
                 "SELECT * FROM images WHERE id = %s",
                 (image_id,)
             )
+
             image = cursor.fetchone()
 
     finally:
@@ -284,11 +361,14 @@ def download_processed(image_id):
     connection = get_db_connection()
 
     try:
+
         with connection.cursor() as cursor:
+
             cursor.execute(
                 "SELECT * FROM images WHERE id = %s",
                 (image_id,)
             )
+
             image = cursor.fetchone()
 
     finally:
@@ -297,24 +377,40 @@ def download_processed(image_id):
     if not image:
         abort(404)
 
-    processed_key = image["processed_s3_key"]
+    # Use stored key or locate the processed image
+    processed_key = image.get("processed_s3_key")
 
     if not processed_key:
-        filename = image["original_s3_key"].split("/")[-1].rsplit(".", 1)[0]
-        processed_key = f"processed/{filename}.jpg"
+
+        processed_key = find_processed_image(
+            image["original_s3_key"]
+        )
+
+    if not processed_key:
+        return "Processed image is not available yet.", 404
 
     file_data = BytesIO()
 
     try:
-        s3.download_fileobj(
-            BUCKET_NAME,
-            processed_key,
-            file_data
+
+        response = s3.get_object(
+            Bucket=BUCKET_NAME,
+            Key=processed_key
+        )
+
+        file_data.write(response["Body"].read())
+
+        content_type = (
+            response.get("ContentType")
+            or mimetypes.guess_type(processed_key)[0]
+            or "application/octet-stream"
         )
 
     except ClientError as error:
 
-        error_code = error.response.get("Error", {}).get("Code")
+        error_code = error.response.get(
+            "Error", {}
+        ).get("Code")
 
         if error_code in ("404", "NoSuchKey", "NotFound"):
             return "Processed image is not available yet.", 404
@@ -325,7 +421,7 @@ def download_processed(image_id):
 
     return send_file(
         file_data,
-        mimetype="image/jpeg",
+        mimetype=content_type,
         as_attachment=True,
         download_name=os.path.basename(processed_key)
     )
@@ -341,6 +437,7 @@ def delete_image(image_id):
     connection = get_db_connection()
 
     try:
+
         with connection.cursor() as cursor:
 
             cursor.execute(
@@ -355,11 +452,14 @@ def delete_image(image_id):
 
             original_key = image["original_s3_key"]
 
-            processed_key = image["processed_s3_key"]
+            # Find processed image using its actual extension
+            processed_key = image.get("processed_s3_key")
 
             if not processed_key:
-                filename = original_key.split("/")[-1].rsplit(".", 1)[0]
-                processed_key = f"processed/{filename}.jpg"
+
+                processed_key = find_processed_image(
+                    original_key
+                )
 
             # Delete original image from S3
             s3.delete_object(
@@ -367,11 +467,13 @@ def delete_image(image_id):
                 Key=original_key
             )
 
-            # Delete processed image from S3
-            s3.delete_object(
-                Bucket=BUCKET_NAME,
-                Key=processed_key
-            )
+            # Delete processed image if it exists
+            if processed_key:
+
+                s3.delete_object(
+                    Bucket=BUCKET_NAME,
+                    Key=processed_key
+                )
 
             # Delete database record
             cursor.execute(
@@ -387,8 +489,13 @@ def delete_image(image_id):
         )
 
     except Exception:
+
         connection.rollback()
-        app.logger.exception("Image deletion failed")
+
+        app.logger.exception(
+            "Image deletion failed"
+        )
+
         return "Image deletion failed. Check server logs.", 500
 
     finally:
@@ -402,4 +509,9 @@ def delete_image(image_id):
 # ---------------------------------
 
 if __name__ == "__main__":
-    app.run(debug=True)
+
+    app.run(
+        host="0.0.0.0",
+        port=5000,
+        debug=False
+    )
