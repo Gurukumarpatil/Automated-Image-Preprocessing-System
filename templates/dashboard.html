@@ -3,434 +3,815 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AWS Image Processing Dashboard</title>
+    <title>Dashboard — AWS Image Preprocessing</title>
 
-    <link
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-      rel="stylesheet"
-    />
+    <!-- Google Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" />
 
     <style>
+      * { font-family: "Inter", sans-serif; box-sizing: border-box; }
+
       body {
-        background: #f4f6f9;
-        font-family: Arial, sans-serif;
+        margin: 0;
+        background: #0f172a;
+        color: #e2e8f0;
       }
 
+      /* ── Sidebar ── */
       .sidebar {
-        min-height: 100vh;
-        background: #172033;
-        color: white;
-        padding: 25px 18px;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 250px;
+        height: 100vh;
+        background: #1e293b;
+        border-right: 1px solid #334155;
+        padding: 28px 18px;
+        display: flex;
+        flex-direction: column;
+        z-index: 100;
       }
 
-      .sidebar h4 {
-        margin-bottom: 35px;
-      }
-
-      .sidebar a {
-        display: block;
-        color: #cbd5e1;
+      .sidebar-brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 36px;
         text-decoration: none;
-        padding: 12px;
-        border-radius: 6px;
-        margin-bottom: 8px;
       }
 
-      .sidebar a.active,
-      .sidebar a:hover {
-        background: #263650;
+      .sidebar-brand-icon {
+        width: 38px;
+        height: 38px;
+        background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
         color: white;
       }
 
-      .main-content {
-        padding: 30px;
+      .sidebar-brand span {
+        font-weight: 700;
+        font-size: 1.05rem;
+        color: white;
       }
 
+      .sidebar-nav { list-style: none; padding: 0; margin: 0; flex: 1; }
+
+      .sidebar-nav li { margin-bottom: 4px; }
+
+      .sidebar-nav a {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 11px 14px;
+        border-radius: 8px;
+        color: #94a3b8;
+        text-decoration: none;
+        font-size: 0.9rem;
+        font-weight: 500;
+        transition: all 0.2s;
+      }
+
+      .sidebar-nav a:hover { background: #334155; color: #e2e8f0; }
+
+      .sidebar-nav a.active {
+        background: linear-gradient(135deg, rgba(59,130,246,.15), rgba(139,92,246,.15));
+        color: #93c5fd;
+        border: 1px solid rgba(59,130,246,.25);
+      }
+
+      .sidebar-nav a i { font-size: 1.1rem; width: 20px; text-align: center; }
+
+      .sidebar-footer {
+        padding-top: 16px;
+        border-top: 1px solid #334155;
+        font-size: 0.75rem;
+        color: #64748b;
+        text-align: center;
+      }
+
+      /* ── Main ── */
+      .main {
+        margin-left: 250px;
+        padding: 32px 36px;
+        min-height: 100vh;
+      }
+
+      /* ── Top Bar ── */
+      .top-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 28px;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      .top-bar h2 {
+        font-weight: 700;
+        font-size: 1.5rem;
+        margin: 0;
+        color: white;
+      }
+
+      .top-bar p { margin: 4px 0 0; color: #94a3b8; font-size: 0.9rem; }
+
+      .upload-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 22px;
+        background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+        color: white;
+        border-radius: 10px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.9rem;
+        transition: all 0.3s;
+      }
+
+      .upload-link:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 8px 25px rgba(59,130,246,.35);
+        color: white;
+      }
+
+      /* ── Flash Messages ── */
+      .alert-success {
+        background: rgba(34,197,94,.1);
+        border: 1px solid rgba(34,197,94,.3);
+        color: #4ade80;
+      }
+
+      /* ── Stat Cards ── */
       .stat-card {
-        border: none;
-        border-radius: 12px;
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 14px;
         padding: 22px;
-        box-shadow: 0 3px 12px rgba(0, 0, 0, 0.05);
+        transition: all 0.3s;
       }
 
-      .image-card {
-        border: none;
+      .stat-card:hover {
+        border-color: #475569;
+        transform: translateY(-2px);
+      }
+
+      .stat-card .stat-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        margin-bottom: 14px;
+      }
+
+      .stat-card h6 { color: #94a3b8; font-size: 0.82rem; font-weight: 500; margin-bottom: 6px; }
+      .stat-card h2 { font-size: 1.8rem; font-weight: 700; margin: 0; color: white; }
+
+      .stat-icon-total { background: rgba(59,130,246,.15); color: #60a5fa; }
+      .stat-icon-done  { background: rgba(34,197,94,.15);  color: #4ade80; }
+      .stat-icon-proc  { background: rgba(250,204,21,.15); color: #facc15; }
+      .stat-icon-saved  { background: rgba(139,92,246,.15); color: #a78bfa; }
+
+      /* ── Search & Filter Bar ── */
+      .filter-bar {
+        background: #1e293b;
+        border: 1px solid #334155;
         border-radius: 12px;
+        padding: 16px 20px;
+        margin-bottom: 24px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        flex-wrap: wrap;
+      }
+
+      .filter-bar input {
+        flex: 1;
+        min-width: 200px;
+        background: #0f172a;
+        border: 1px solid #334155;
+        color: #e2e8f0;
+        border-radius: 8px;
+        padding: 9px 14px;
+        font-size: 0.875rem;
+      }
+
+      .filter-bar input::placeholder { color: #64748b; }
+      .filter-bar input:focus { outline: none; border-color: #3b82f6; }
+
+      .filter-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+
+      .filter-pill {
+        padding: 6px 16px;
+        border-radius: 20px;
+        border: 1px solid #475569;
+        background: transparent;
+        color: #94a3b8;
+        font-size: 0.8rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .filter-pill:hover { border-color: #3b82f6; color: #93c5fd; }
+
+      .filter-pill.active {
+        background: rgba(59,130,246,.15);
+        border-color: #3b82f6;
+        color: #93c5fd;
+      }
+
+      /* ── Image Cards ── */
+      .image-card {
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 14px;
         overflow: hidden;
-        box-shadow: 0 3px 12px rgba(0, 0, 0, 0.06);
+        transition: all 0.3s;
         height: 100%;
       }
 
-      .image-preview {
-        width: 100%;
-        height: 190px;
-        object-fit: contain;
-        background: #eef1f5;
+      .image-card:hover {
+        border-color: #475569;
+        transform: translateY(-3px);
+        box-shadow: 0 12px 36px rgba(0,0,0,.3);
       }
 
-      .image-section {
-        background: #f8fafc;
-        padding: 10px;
-        border-radius: 8px;
-      }
+      .image-card .card-body { padding: 18px; }
 
-      .compression-box {
-        background: #f8fafc;
-        border: 1px solid #e5e7eb;
-        border-radius: 8px;
-        padding: 14px;
-      }
-
-      .metric-value {
-        font-size: 15px;
-        font-weight: bold;
-      }
-
-      .action-buttons {
+      .image-card-header {
         display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
       }
 
-      @media (max-width: 768px) {
-        .sidebar {
-          min-height: auto;
-        }
+      .badge-id {
+        background: #334155;
+        color: #94a3b8;
+        font-size: 0.72rem;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-weight: 500;
+      }
 
-        .main-content {
-          padding: 18px;
-        }
+      .badge-completed {
+        background: rgba(34,197,94,.15);
+        color: #4ade80;
+        font-size: 0.72rem;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-weight: 600;
+      }
+
+      .badge-processing {
+        background: rgba(250,204,21,.15);
+        color: #facc15;
+        font-size: 0.72rem;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-weight: 600;
+      }
+
+      .image-card h6 {
+        font-size: 0.88rem;
+        font-weight: 600;
+        color: #e2e8f0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-bottom: 14px;
+      }
+
+      /* Side-by-side comparison */
+      .compare-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-bottom: 14px;
+      }
+
+      .compare-col { text-align: center; }
+
+      .compare-label {
+        font-size: 0.72rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 6px;
+        color: #94a3b8;
+      }
+
+      .compare-img-wrap {
+        background: #0f172a;
+        border-radius: 8px;
+        overflow: hidden;
+        height: 140px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #334155;
+      }
+
+      .compare-img-wrap img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+      }
+
+      .compare-img-wrap .placeholder-text {
+        color: #475569;
+        font-size: 0.78rem;
+      }
+
+      /* Stats Box */
+      .stats-box {
+        background: #0f172a;
+        border: 1px solid #334155;
+        border-radius: 10px;
+        padding: 14px;
+        margin-bottom: 14px;
+      }
+
+      .stats-box h6 {
+        font-size: 0.78rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #94a3b8;
+        margin-bottom: 12px;
+        overflow: visible;
+        white-space: normal;
+      }
+
+      .stat-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 5px 0;
+      }
+
+      .stat-row .label { font-size: 0.8rem; color: #94a3b8; }
+      .stat-row .value { font-size: 0.82rem; font-weight: 600; color: #e2e8f0; }
+      .stat-row .value.green { color: #4ade80; }
+      .stat-row .value.red { color: #f87171; }
+
+      /* Progress bar for compression */
+      .compression-bar-wrap {
+        margin-top: 8px;
+        background: #1e293b;
+        border-radius: 6px;
+        height: 8px;
+        overflow: hidden;
+      }
+
+      .compression-bar {
+        height: 100%;
+        border-radius: 6px;
+        transition: width 0.5s ease;
+      }
+
+      .compression-bar.positive {
+        background: linear-gradient(90deg, #22c55e, #4ade80);
+      }
+
+      .compression-bar.negative {
+        background: linear-gradient(90deg, #ef4444, #f87171);
+      }
+
+      /* Uploaded date */
+      .upload-date {
+        font-size: 0.78rem;
+        color: #64748b;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      /* Action buttons */
+      .action-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+
+      .btn-download-orig {
+        padding: 8px;
+        border-radius: 8px;
+        font-size: 0.78rem;
+        font-weight: 500;
+        border: 1px solid #334155;
+        background: transparent;
+        color: #93c5fd;
+        text-decoration: none;
+        text-align: center;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+      }
+
+      .btn-download-orig:hover { background: rgba(59,130,246,.1); border-color: #3b82f6; color: #93c5fd; }
+
+      .btn-download-proc {
+        padding: 8px;
+        border-radius: 8px;
+        font-size: 0.78rem;
+        font-weight: 500;
+        border: 1px solid rgba(34,197,94,.3);
+        background: transparent;
+        color: #4ade80;
+        text-decoration: none;
+        text-align: center;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+      }
+
+      .btn-download-proc:hover { background: rgba(34,197,94,.1); border-color: #22c55e; color: #4ade80; }
+
+      .btn-delete {
+        width: 100%;
+        padding: 8px;
+        border-radius: 8px;
+        font-size: 0.78rem;
+        font-weight: 500;
+        border: 1px solid rgba(239,68,68,.25);
+        background: transparent;
+        color: #f87171;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+      }
+
+      .btn-delete:hover { background: rgba(239,68,68,.1); border-color: #ef4444; }
+
+      /* Empty State */
+      .empty-state {
+        text-align: center;
+        padding: 60px 24px;
+        background: #1e293b;
+        border: 1px dashed #334155;
+        border-radius: 14px;
+      }
+
+      .empty-state i { font-size: 52px; color: #334155; display: block; margin-bottom: 16px; }
+      .empty-state h5 { color: #e2e8f0; margin-bottom: 8px; }
+      .empty-state p { color: #64748b; margin-bottom: 20px; }
+
+      /* ── Responsive ── */
+      @media (max-width: 992px) {
+        .sidebar { display: none; }
+        .main { margin-left: 0; padding: 20px; }
+      }
+
+      @media (max-width: 576px) {
+        .compare-row { grid-template-columns: 1fr; }
+        .action-row { grid-template-columns: 1fr; }
       }
     </style>
   </head>
 
   <body>
-    <div class="container-fluid">
-      <div class="row">
-        <!-- SIDEBAR -->
-        <aside class="col-md-2 sidebar">
-          <h4>AWS Image System</h4>
 
-          <a href="{{ url_for('dashboard') }}" class="active"> Dashboard </a>
+    <!-- ── SIDEBAR ── -->
+    <aside class="sidebar">
+      <a href="{{ url_for('upload_page') }}" class="sidebar-brand">
+        <div class="sidebar-brand-icon"><i class="bi bi-cloud-arrow-up"></i></div>
+        <span>Image Preprocessor</span>
+      </a>
 
-          <a href="{{ url_for('home') }}"> Upload Image </a>
+      <ul class="sidebar-nav">
+        <li>
+          <a href="{{ url_for('dashboard') }}" class="active">
+            <i class="bi bi-grid-1x2"></i> Dashboard
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('upload_page') }}">
+            <i class="bi bi-cloud-upload"></i> Upload Image
+          </a>
+        </li>
+        <li>
+          <a href="#">
+            <i class="bi bi-bucket"></i> S3 Storage
+          </a>
+        </li>
+        <li>
+          <a href="#">
+            <i class="bi bi-lightning"></i> Lambda Processing
+          </a>
+        </li>
+        <li>
+          <a href="#">
+            <i class="bi bi-database"></i> RDS Database
+          </a>
+        </li>
+      </ul>
 
-          <a href="#">AWS S3 Storage</a>
-          <a href="#">AWS Lambda Processing</a>
-          <a href="#">Amazon RDS Database</a>
-        </aside>
+      <div class="sidebar-footer">
+        Powered by AWS &bull; S3 &bull; Lambda &bull; RDS
+      </div>
+    </aside>
 
-        <!-- MAIN CONTENT -->
-        <main class="col-md-10 main-content">
-          <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-              <h2>Dashboard Overview</h2>
-              <p class="text-muted mb-0">
-                Manage your uploaded and processed images.
-              </p>
-            </div>
+    <!-- ── MAIN CONTENT ── -->
+    <div class="main">
 
-            <a href="{{ url_for('home') }}" class="btn btn-primary">
-              + Upload Image
-            </a>
-          </div>
+      <!-- Top Bar -->
+      <div class="top-bar">
+        <div>
+          <h2>Dashboard</h2>
+          <p>Manage your uploaded and processed images</p>
+        </div>
+        <a href="{{ url_for('upload_page') }}" class="upload-link">
+          <i class="bi bi-plus-lg"></i> Upload Image
+        </a>
+      </div>
 
-          <!-- FLASH MESSAGES -->
-          {% with messages = get_flashed_messages(with_categories=true) %} {%
-          for category, message in messages %}
-          <div class="alert alert-{{ category }} alert-dismissible fade show">
+      <!-- Flash Messages -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
             {{ message }}
-            <button
-              type="button"
-              class="btn-close"
-              data-bs-dismiss="alert"
-            ></button>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
           </div>
-          {% endfor %} {% endwith %}
+        {% endfor %}
+      {% endwith %}
 
-          <!-- DASHBOARD STATISTICS -->
-          <div class="row g-3 mb-4">
-            <div class="col-md-4">
-              <div class="card stat-card">
-                <h6 class="text-muted">Total Images</h6>
-                <h2>{{ images|length }}</h2>
-              </div>
-            </div>
+      <!-- Stat Cards -->
+      {% set total = images|length %}
+      {% set completed = images|selectattr('status', 'equalto', 'COMPLETED')|list|length %}
+      {% set processing = images|selectattr('status', 'equalto', 'PROCESSING')|list|length %}
 
-            <div class="col-md-4">
-              <div class="card stat-card">
-                <h6 class="text-muted">Completed</h6>
-                <h2>
-                  {{ images|selectattr('status', 'equalto',
-                  'COMPLETED')|list|length }}
-                </h2>
-              </div>
-            </div>
-
-            <div class="col-md-4">
-              <div class="card stat-card">
-                <h6 class="text-muted">Processing</h6>
-                <h2>
-                  {{ images|selectattr('status', 'equalto',
-                  'PROCESSING')|list|length }}
-                </h2>
-              </div>
-            </div>
+      <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3">
+          <div class="stat-card">
+            <div class="stat-icon stat-icon-total"><i class="bi bi-images"></i></div>
+            <h6>Total Images</h6>
+            <h2>{{ total }}</h2>
           </div>
-
-          <!-- SEARCH AND FILTER -->
-          <div class="card border-0 p-3 mb-4">
-            <input
-              type="text"
-              id="searchInput"
-              class="form-control"
-              placeholder="Search images by filename..."
-            />
-
-            <div class="mt-3">
-              <button class="btn btn-dark btn-sm filter-btn" data-filter="all">
-                All
-              </button>
-
-              <button
-                class="btn btn-success btn-sm filter-btn"
-                data-filter="COMPLETED"
-              >
-                Completed
-              </button>
-
-              <button
-                class="btn btn-warning btn-sm filter-btn"
-                data-filter="PROCESSING"
-              >
-                Processing
-              </button>
-            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+          <div class="stat-card">
+            <div class="stat-icon stat-icon-done"><i class="bi bi-check-circle"></i></div>
+            <h6>Completed</h6>
+            <h2>{{ completed }}</h2>
           </div>
+        </div>
+        <div class="col-6 col-lg-3">
+          <div class="stat-card">
+            <div class="stat-icon stat-icon-proc"><i class="bi bi-hourglass-split"></i></div>
+            <h6>Processing</h6>
+            <h2>{{ processing }}</h2>
+          </div>
+        </div>
+        <div class="col-6 col-lg-3">
+          <div class="stat-card">
+            <div class="stat-icon stat-icon-saved"><i class="bi bi-hdd"></i></div>
+            <h6>Total Saved</h6>
+            <h2>
+              {% set ns = namespace(saved=0) %}
+              {% for img in images %}
+                {% if img.original_size and img.processed_size and img.original_size > img.processed_size %}
+                  {% set ns.saved = ns.saved + (img.original_size - img.processed_size) %}
+                {% endif %}
+              {% endfor %}
+              {% if ns.saved >= 1048576 %}
+                {{ "%.1f"|format(ns.saved / 1048576) }} MB
+              {% elif ns.saved > 0 %}
+                {{ "%.0f"|format(ns.saved / 1024) }} KB
+              {% else %}
+                0 KB
+              {% endif %}
+            </h2>
+          </div>
+        </div>
+      </div>
 
-          <!-- IMAGE CARDS -->
-          <div class="row g-4" id="imageContainer">
-            {% for image in images %}
+      <!-- Search & Filter -->
+      <div class="filter-bar">
+        <input type="text" id="searchInput" placeholder="Search by filename..." />
+        <div class="filter-pills">
+          <button class="filter-pill active" data-filter="all">All</button>
+          <button class="filter-pill" data-filter="COMPLETED">
+            <i class="bi bi-check-circle"></i> Completed
+          </button>
+          <button class="filter-pill" data-filter="PROCESSING">
+            <i class="bi bi-hourglass-split"></i> Processing
+          </button>
+        </div>
+      </div>
 
-            <div
-              class="col-md-6 col-xl-4 image-item"
-              data-status="{{ image.status }}"
-              data-filename="{{ image.original_filename|lower }}"
-            >
-              <div class="card image-card">
-                <div class="card-body">
-                  <div class="d-flex justify-content-between mb-3">
-                    <span class="badge bg-secondary"> ID: {{ image.id }} </span>
+      <!-- Image Cards -->
+      <div class="row g-3" id="imageContainer">
+        {% for image in images %}
+        <div
+          class="col-md-6 col-xl-4 image-item"
+          data-status="{{ image.status }}"
+          data-filename="{{ image.original_filename|lower }}"
+        >
+          <div class="image-card">
+            <div class="card-body">
 
-                    {% if image.status == 'COMPLETED' %}
-                    <span class="badge bg-success"> COMPLETED </span>
-                    {% else %}
-                    <span class="badge bg-warning text-dark"> PROCESSING </span>
-                    {% endif %}
+              <!-- Header -->
+              <div class="image-card-header">
+                <span class="badge-id">#{{ image.id }}</span>
+                {% if image.status == 'COMPLETED' %}
+                  <span class="badge-completed"><i class="bi bi-check-circle-fill"></i> Completed</span>
+                {% else %}
+                  <span class="badge-processing"><i class="bi bi-arrow-repeat"></i> Processing</span>
+                {% endif %}
+              </div>
+
+              <h6 title="{{ image.original_filename }}">{{ image.original_filename }}</h6>
+
+              <!-- Side-by-Side Comparison -->
+              <div class="compare-row">
+                <div class="compare-col">
+                  <div class="compare-label">Original</div>
+                  <div class="compare-img-wrap">
+                    <img src="{{ image.original_url }}" alt="Original" />
                   </div>
-
-                  <h6 class="text-truncate">{{ image.original_filename }}</h6>
-
-                  <!-- ORIGINAL IMAGE -->
-                  <div class="image-section mb-3">
-                    <p class="fw-bold small mb-2">Original Image</p>
-
-                    <img
-                      src="{{ image.original_url }}"
-                      class="image-preview"
-                      alt="Original image"
-                    />
-
-                    <a
-                      href="{{ url_for('download_original', image_id=image.id) }}"
-                      class="btn btn-outline-primary btn-sm w-100 mt-2"
-                    >
-                      Download Original
-                    </a>
-                  </div>
-
-                  <!-- PROCESSED IMAGE -->
-                  <div class="image-section mb-3">
-                    <p class="fw-bold small mb-2">Processed Image</p>
-
+                </div>
+                <div class="compare-col">
+                  <div class="compare-label">Processed</div>
+                  <div class="compare-img-wrap">
                     {% if image.processed_url %}
-
-                    <img
-                      src="{{ image.processed_url }}"
-                      class="image-preview"
-                      alt="Processed image"
-                    />
-
-                    <a
-                      href="{{ url_for('download_processed', image_id=image.id) }}"
-                      class="btn btn-outline-success btn-sm w-100 mt-2"
-                    >
-                      Download Processed
-                    </a>
-
+                      <img src="{{ image.processed_url }}" alt="Processed" />
                     {% else %}
-
-                    <div
-                      class="image-preview d-flex align-items-center justify-content-center"
-                    >
-                      <span class="text-muted">
-                        Waiting for processing...
+                      <span class="placeholder-text">
+                        <i class="bi bi-hourglass-split"></i> Pending...
                       </span>
-                    </div>
-
                     {% endif %}
                   </div>
-
-                  <!-- COMPRESSION STATISTICS -->
-                  <div class="compression-box mb-3">
-                    <h6 class="fw-bold mb-3">
-                      <i class="bi bi-speedometer2"></i>
-                      Compression Statistics
-                    </h6>
-
-                    {% if image.processed_size is not none and
-                    image.original_size is not none %}
-
-                    <div class="d-flex justify-content-between mb-2">
-                      <span class="text-muted small"> Original Size </span>
-
-                      <span class="metric-value">
-                        {{ "%.2f"|format(image.original_size / 1024) }} KB
-                      </span>
-                    </div>
-
-                    <div class="d-flex justify-content-between mb-2">
-                      <span class="text-muted small"> Processed Size </span>
-
-                      <span class="metric-value">
-                        {{ "%.2f"|format(image.processed_size / 1024) }} KB
-                      </span>
-                    </div>
-
-                    <hr />
-
-                    {% set size_difference = image.original_size -
-                    image.processed_size %} {% if size_difference > 0 %}
-
-                    <div class="d-flex justify-content-between mb-2">
-                      <span class="text-success small"> Storage Saved </span>
-
-                      <span class="metric-value text-success">
-                        {{ "%.2f"|format(size_difference / 1024) }} KB
-                      </span>
-                    </div>
-
-                    {% elif size_difference < 0 %}
-
-                    <div class="d-flex justify-content-between mb-2">
-                      <span class="text-danger small"> Size Increased </span>
-
-                      <span class="metric-value text-danger">
-                        {{ "%.2f"|format((-size_difference) / 1024) }} KB
-                      </span>
-                    </div>
-
-                    {% else %}
-
-                    <div class="d-flex justify-content-between mb-2">
-                      <span class="text-muted small"> Size Change </span>
-
-                      <span class="metric-value"> No change </span>
-                    </div>
-
-                    {% endif %}
-
-                    <div class="d-flex justify-content-between mt-2">
-                      <span class="text-muted small">
-                        Compression Percentage
-                      </span>
-
-                      <span
-                        class="metric-value {% if image.compression_percentage >= 0 %} text-success {% else %} text-danger {% endif %}"
-                      >
-                        {{ image.compression_percentage }}%
-                      </span>
-                    </div>
-
-                    {% else %}
-
-                    <p class="text-muted small mb-0">
-                      Compression statistics will appear after processing is
-                      completed.
-                    </p>
-
-                    {% endif %}
-                  </div>
-
-                  <!-- UPLOAD DATE -->
-                  <p class="text-muted small">
-                    Uploaded: {{ image.uploaded_at }}
-                  </p>
-
-                  <!-- DELETE BUTTON -->
-                  <form
-                    action="{{ url_for('delete_image', image_id=image.id) }}"
-                    method="POST"
-                    onsubmit="
-                      return confirm(
-                        'Are you sure you want to permanently delete this image and its S3 files?',
-                      );
-                    "
-                  >
-                    <button type="submit" class="btn btn-danger btn-sm w-100">
-                      Delete Image
-                    </button>
-                  </form>
                 </div>
               </div>
-            </div>
 
-            {% else %}
+              <!-- Compression Stats -->
+              <div class="stats-box">
+                <h6><i class="bi bi-bar-chart"></i> Compression Statistics</h6>
 
-            <div class="col-12">
-              <div class="card border-0 p-5 text-center">
-                <h5>No images uploaded yet</h5>
+                {% if image.processed_size is not none and image.original_size is not none %}
 
-                <p class="text-muted">Upload an image to see it here.</p>
+                  <div class="stat-row">
+                    <span class="label">Original Size</span>
+                    <span class="value">{{ "%.2f"|format(image.original_size / 1024) }} KB</span>
+                  </div>
+
+                  <div class="stat-row">
+                    <span class="label">Processed Size</span>
+                    <span class="value">{{ "%.2f"|format(image.processed_size / 1024) }} KB</span>
+                  </div>
+
+                  {% set size_diff = image.original_size - image.processed_size %}
+
+                  {% if size_diff > 0 %}
+                    <div class="stat-row">
+                      <span class="label">Storage Saved</span>
+                      <span class="value green">{{ "%.2f"|format(size_diff / 1024) }} KB</span>
+                    </div>
+                  {% elif size_diff < 0 %}
+                    <div class="stat-row">
+                      <span class="label">Size Increased</span>
+                      <span class="value red">+{{ "%.2f"|format((-size_diff) / 1024) }} KB</span>
+                    </div>
+                  {% endif %}
+
+                  <div class="stat-row">
+                    <span class="label">Compression</span>
+                    {% if image.compression_percentage >= 0 %}
+                      <span class="value green">{{ image.compression_percentage }}%</span>
+                    {% else %}
+                      <span class="value red">{{ image.compression_percentage }}%</span>
+                    {% endif %}
+                  </div>
+
+                  <!-- Visual compression bar -->
+                  {% set bar_pct = [image.compression_percentage|abs, 100]|min %}
+                  <div class="compression-bar-wrap">
+                    <div
+                      class="compression-bar {% if image.compression_percentage >= 0 %}positive{% else %}negative{% endif %}"
+                      style="width: {{ bar_pct }}%"
+                    ></div>
+                  </div>
+
+                {% else %}
+                  <p style="color:#64748b; font-size:0.82rem; margin:0;">
+                    <i class="bi bi-clock"></i> Stats available after processing completes.
+                  </p>
+                {% endif %}
               </div>
-            </div>
 
-            {% endfor %}
+              <!-- Upload Date -->
+              <div class="upload-date">
+                <i class="bi bi-calendar3"></i> {{ image.uploaded_at }}
+              </div>
+
+              <!-- Action Buttons -->
+              <div class="action-row">
+                <a
+                  href="{{ url_for('download_original', image_id=image.id) }}"
+                  class="btn-download-orig"
+                >
+                  <i class="bi bi-download"></i> Original
+                </a>
+
+                {% if image.processed_url %}
+                  <a
+                    href="{{ url_for('download_processed', image_id=image.id) }}"
+                    class="btn-download-proc"
+                  >
+                    <i class="bi bi-download"></i> Processed
+                  </a>
+                {% else %}
+                  <span class="btn-download-proc" style="opacity:0.4; cursor:default;">
+                    <i class="bi bi-clock"></i> Pending
+                  </span>
+                {% endif %}
+              </div>
+
+              <form
+                action="{{ url_for('delete_image', image_id=image.id) }}"
+                method="POST"
+                onsubmit="return confirm('Are you sure you want to permanently delete this image and its S3 files?');"
+              >
+                <button type="submit" class="btn-delete">
+                  <i class="bi bi-trash3"></i> Delete Image
+                </button>
+              </form>
+
+            </div>
           </div>
-        </main>
+        </div>
+
+        {% else %}
+
+        <!-- Empty State -->
+        <div class="col-12">
+          <div class="empty-state">
+            <i class="bi bi-cloud-arrow-up"></i>
+            <h5>No images uploaded yet</h5>
+            <p>Upload your first image to start processing.</p>
+            <a href="{{ url_for('upload_page') }}" class="upload-link">
+              <i class="bi bi-plus-lg"></i> Upload Image
+            </a>
+          </div>
+        </div>
+
+        {% endfor %}
       </div>
+
     </div>
 
+    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
       const searchInput = document.getElementById("searchInput");
-      const filterButtons = document.querySelectorAll(".filter-btn");
+      const filterPills = document.querySelectorAll(".filter-pill");
       const imageItems = document.querySelectorAll(".image-item");
-
       let currentFilter = "all";
 
       function filterImages() {
-        const searchText = searchInput.value.toLowerCase();
-
+        const query = searchInput.value.toLowerCase();
         imageItems.forEach((item) => {
           const filename = item.dataset.filename;
           const status = item.dataset.status;
-
-          const matchesSearch = filename.includes(searchText);
-
-          const matchesFilter =
-            currentFilter === "all" || status === currentFilter;
-
-          item.style.display = matchesSearch && matchesFilter ? "" : "none";
+          const matchSearch = filename.includes(query);
+          const matchFilter = currentFilter === "all" || status === currentFilter;
+          item.style.display = matchSearch && matchFilter ? "" : "none";
         });
       }
 
       searchInput.addEventListener("input", filterImages);
 
-      filterButtons.forEach((button) => {
-        button.addEventListener("click", () => {
-          currentFilter = button.dataset.filter;
+      filterPills.forEach((pill) => {
+        pill.addEventListener("click", () => {
+          filterPills.forEach((p) => p.classList.remove("active"));
+          pill.classList.add("active");
+          currentFilter = pill.dataset.filter;
           filterImages();
         });
       });

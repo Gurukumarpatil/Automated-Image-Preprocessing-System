@@ -3,153 +3,432 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Upload — AWS Image Preprocessing</title>
 
-    <title>AWS Image Preprocessing System</title>
+    <!-- Google Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
     <!-- Bootstrap CSS -->
-    <link
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-      rel="stylesheet"
-    />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" />
 
     <style>
+      * { font-family: "Inter", sans-serif; }
+
       body {
-        background-color: #f4f7fb;
-        font-family: Arial, sans-serif;
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
 
-      .main-container {
-        max-width: 750px;
-        margin: 80px auto;
+      .page-wrapper {
+        max-width: 680px;
+        width: 100%;
+        padding: 20px;
       }
 
-      .upload-card {
-        border: none;
-        border-radius: 15px;
-        padding: 35px;
-        background-color: white;
+      /* Header */
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 8px;
       }
 
-      .upload-icon {
-        font-size: 50px;
-        color: #0d6efd;
+      .brand-icon {
+        width: 44px;
+        height: 44px;
+        background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+        color: white;
       }
 
-      .upload-btn {
-        padding: 12px;
-        font-weight: 600;
+      .brand h1 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: white;
+        margin: 0;
       }
 
       .subtitle {
-        color: #6c757d;
+        color: #94a3b8;
+        font-size: 0.95rem;
+        margin-bottom: 32px;
       }
 
-      #imagePreview {
-        max-width: 100%;
-        max-height: 250px;
-        display: none;
-        object-fit: contain;
+      /* Upload Card */
+      .upload-card {
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 16px;
+        padding: 36px;
       }
+
+      /* Drop Zone */
+      .drop-zone {
+        border: 2px dashed #475569;
+        border-radius: 12px;
+        padding: 48px 24px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: #0f172a;
+        position: relative;
+      }
+
+      .drop-zone:hover,
+      .drop-zone.drag-over {
+        border-color: #3b82f6;
+        background: rgba(59, 130, 246, 0.08);
+      }
+
+      .drop-zone-icon {
+        font-size: 48px;
+        color: #3b82f6;
+        margin-bottom: 12px;
+      }
+
+      .drop-zone h5 {
+        color: #e2e8f0;
+        font-weight: 600;
+        margin-bottom: 6px;
+      }
+
+      .drop-zone p {
+        color: #64748b;
+        font-size: 0.875rem;
+        margin: 0;
+      }
+
+      .drop-zone .browse-link {
+        color: #3b82f6;
+        text-decoration: underline;
+        cursor: pointer;
+      }
+
+      /* Preview */
+      .preview-area {
+        display: none;
+        margin-top: 20px;
+        background: #0f172a;
+        border-radius: 12px;
+        padding: 16px;
+        border: 1px solid #334155;
+      }
+
+      .preview-area.active { display: block; }
+
+      .preview-img {
+        max-width: 100%;
+        max-height: 280px;
+        border-radius: 8px;
+        object-fit: contain;
+        display: block;
+        margin: 0 auto;
+      }
+
+      .file-info {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 12px;
+        padding: 10px 14px;
+        background: #1e293b;
+        border-radius: 8px;
+      }
+
+      .file-info-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: #e2e8f0;
+        font-size: 0.875rem;
+        min-width: 0;
+      }
+
+      .file-info-left i { color: #3b82f6; font-size: 1.2rem; }
+      .file-info-left span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+      .file-info .remove-btn {
+        background: none;
+        border: none;
+        color: #ef4444;
+        font-size: 1.1rem;
+        cursor: pointer;
+        padding: 4px;
+        flex-shrink: 0;
+      }
+
+      /* Upload Button */
+      .upload-btn {
+        width: 100%;
+        padding: 14px;
+        font-weight: 600;
+        font-size: 1rem;
+        border-radius: 10px;
+        border: none;
+        background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+        color: white;
+        margin-top: 20px;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+
+      .upload-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 8px 25px rgba(59, 130, 246, 0.35);
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        color: white;
+      }
+
+      .upload-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+
+      /* Supported Formats */
+      .formats {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        margin-top: 20px;
+        flex-wrap: wrap;
+      }
+
+      .format-badge {
+        background: #334155;
+        color: #94a3b8;
+        font-size: 0.75rem;
+        font-weight: 500;
+        padding: 4px 10px;
+        border-radius: 6px;
+      }
+
+      /* Dashboard Link */
+      .dashboard-link {
+        text-align: center;
+        margin-top: 20px;
+      }
+
+      .dashboard-link a {
+        color: #94a3b8;
+        text-decoration: none;
+        font-size: 0.9rem;
+        transition: color 0.2s;
+      }
+
+      .dashboard-link a:hover { color: #3b82f6; }
+      .dashboard-link a i { margin-right: 4px; }
+
+      /* AWS services bar */
+      .aws-bar {
+        display: flex;
+        gap: 16px;
+        justify-content: center;
+        margin-top: 28px;
+        flex-wrap: wrap;
+      }
+
+      .aws-chip {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(59, 130, 246, 0.1);
+        border: 1px solid rgba(59, 130, 246, 0.2);
+        color: #93c5fd;
+        font-size: 0.78rem;
+        font-weight: 500;
+        padding: 6px 14px;
+        border-radius: 20px;
+      }
+
+      .aws-chip i { font-size: 0.9rem; }
     </style>
   </head>
 
   <body>
-    <div class="container main-container">
-      <!-- Header -->
-      <div class="text-center mb-5">
-        <h1 class="fw-bold">AWS Image Preprocessing System</h1>
+    <div class="page-wrapper">
 
-        <p class="subtitle mt-3">
-          Upload your images and prepare them for automated preprocessing using
-          AWS cloud services.
+      <!-- Header -->
+      <div class="text-center mb-2">
+        <div class="brand justify-content-center">
+          <div class="brand-icon"><i class="bi bi-cloud-arrow-up"></i></div>
+          <h1>Image Preprocessor</h1>
+        </div>
+        <p class="subtitle">
+          Upload images for automated resizing &amp; compression using AWS cloud services.
         </p>
       </div>
 
       <!-- Upload Card -->
-      <div class="card upload-card shadow-sm">
-        <div class="text-center mb-4">
-          <div class="upload-icon">&#128444;</div>
-
-          <h4 class="fw-bold mt-2">Upload Your Image</h4>
-
-          <p class="text-muted">
-            Select an image from your device to get started.
-          </p>
-        </div>
-
-        <!-- Image Upload Form -->
-        <form action="/upload" method="POST" enctype="multipart/form-data">
-          <label for="image" class="form-label fw-semibold">
-            Choose Image
-          </label>
-
-          <input
-            type="file"
-            id="image"
-            name="image"
-            class="form-control mb-3"
-            accept=".jpg,.jpeg,.png,.webp"
-            onchange="previewImage(event)"
-            required
-          />
-
-          <!-- Image Preview -->
-          <div class="text-center mb-3">
-            <img
-              id="imagePreview"
-              src=""
-              alt="Image Preview"
-              class="rounded shadow-sm"
+      <div class="upload-card">
+        <form
+          id="uploadForm"
+          action="/upload"
+          method="POST"
+          enctype="multipart/form-data"
+        >
+          <!-- Drop Zone -->
+          <div class="drop-zone" id="dropZone">
+            <input
+              type="file"
+              id="image"
+              name="image"
+              accept=".jpg,.jpeg,.png,.webp"
+              hidden
             />
+            <div class="drop-zone-icon"><i class="bi bi-cloud-arrow-up"></i></div>
+            <h5>Drag &amp; drop your image here</h5>
+            <p>or <span class="browse-link">browse files</span> from your device</p>
           </div>
 
-          <button type="submit" class="btn btn-primary w-100 upload-btn">
-            Upload Image
+          <!-- Preview Area -->
+          <div class="preview-area" id="previewArea">
+            <img id="previewImg" class="preview-img" src="" alt="Preview" />
+            <div class="file-info">
+              <div class="file-info-left">
+                <i class="bi bi-file-earmark-image"></i>
+                <span id="fileName">image.jpg</span>
+                <span id="fileSize" class="text-muted">—</span>
+              </div>
+              <button type="button" class="remove-btn" id="removeBtn" title="Remove">
+                <i class="bi bi-x-circle"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Upload Button -->
+          <button type="submit" class="btn upload-btn" id="uploadBtn" disabled>
+            <i class="bi bi-cloud-upload"></i>
+            Upload &amp; Process
           </button>
         </form>
 
-        <div class="text-center mt-4">
-          <small class="text-muted">
-            Supported formats: JPG, JPEG, PNG and WEBP
-          </small>
+        <!-- Formats -->
+        <div class="formats">
+          <span class="format-badge">JPG</span>
+          <span class="format-badge">JPEG</span>
+          <span class="format-badge">PNG</span>
+          <span class="format-badge">WEBP</span>
+          <span style="color:#64748b; font-size:0.78rem;">• Max 10 MB</span>
         </div>
       </div>
 
-      <!-- Footer -->
-      <div class="text-center mt-4">
-        <small class="text-muted">
-          Automated Image Preprocessing System Using AWS
-        </small>
+      <!-- Dashboard Link -->
+      <div class="dashboard-link">
+        <a href="{{ url_for('dashboard') }}">
+          <i class="bi bi-grid-1x2"></i> Go to Dashboard
+        </a>
+      </div>
+
+      <!-- AWS Services Bar -->
+      <div class="aws-bar">
+        <div class="aws-chip"><i class="bi bi-bucket"></i> S3 Storage</div>
+        <div class="aws-chip"><i class="bi bi-lightning"></i> Lambda Processing</div>
+        <div class="aws-chip"><i class="bi bi-database"></i> RDS Database</div>
       </div>
     </div>
 
-    <!-- Image Preview JavaScript -->
-    <script>
-      function previewImage(event) {
-        const file = event.target.files[0];
-        const preview = document.getElementById("imagePreview");
-
-        if (file) {
-          const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
-
-          if (!allowedTypes.includes(file.type)) {
-            alert("Please select a JPG, JPEG, PNG or WEBP image.");
-            event.target.value = "";
-            preview.src = "";
-            preview.style.display = "none";
-            return;
-          }
-
-          preview.src = URL.createObjectURL(file);
-          preview.style.display = "block";
-        } else {
-          preview.src = "";
-          preview.style.display = "none";
-        }
-      }
-    </script>
-
-    <!-- Bootstrap JavaScript -->
+    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+      const dropZone = document.getElementById("dropZone");
+      const fileInput = document.getElementById("image");
+      const previewArea = document.getElementById("previewArea");
+      const previewImg = document.getElementById("previewImg");
+      const fileName = document.getElementById("fileName");
+      const fileSize = document.getElementById("fileSize");
+      const removeBtn = document.getElementById("removeBtn");
+      const uploadBtn = document.getElementById("uploadBtn");
+      const uploadForm = document.getElementById("uploadForm");
+      const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+
+      // Click to browse
+      dropZone.addEventListener("click", () => fileInput.click());
+
+      // Drag & drop
+      dropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropZone.classList.add("drag-over");
+      });
+
+      dropZone.addEventListener("dragleave", () => {
+        dropZone.classList.remove("drag-over");
+      });
+
+      dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("drag-over");
+        if (e.dataTransfer.files.length) {
+          fileInput.files = e.dataTransfer.files;
+          handleFile(e.dataTransfer.files[0]);
+        }
+      });
+
+      // File input change
+      fileInput.addEventListener("change", () => {
+        if (fileInput.files.length) handleFile(fileInput.files[0]);
+      });
+
+      function handleFile(file) {
+        if (!allowedTypes.includes(file.type)) {
+          alert("Please select a JPG, JPEG, PNG, or WEBP image.");
+          resetUpload();
+          return;
+        }
+
+        if (file.size > 10 * 1024 * 1024) {
+          alert("File size must be under 10 MB.");
+          resetUpload();
+          return;
+        }
+
+        previewImg.src = URL.createObjectURL(file);
+        fileName.textContent = file.name;
+        fileSize.textContent = formatSize(file.size);
+        previewArea.classList.add("active");
+        dropZone.style.display = "none";
+        uploadBtn.disabled = false;
+      }
+
+      // Remove file
+      removeBtn.addEventListener("click", () => resetUpload());
+
+      function resetUpload() {
+        fileInput.value = "";
+        previewImg.src = "";
+        previewArea.classList.remove("active");
+        dropZone.style.display = "";
+        uploadBtn.disabled = true;
+      }
+
+      function formatSize(bytes) {
+        if (bytes < 1024) return bytes + " B";
+        if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB";
+        return (bytes / 1048576).toFixed(2) + " MB";
+      }
+
+      // Disable button on submit to prevent double-click
+      uploadForm.addEventListener("submit", () => {
+        uploadBtn.disabled = true;
+        uploadBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Uploading...';
+      });
+    </script>
   </body>
 </html>

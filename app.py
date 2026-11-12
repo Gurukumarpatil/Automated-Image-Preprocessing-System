@@ -78,7 +78,7 @@ def find_processed_image(original_s3_key):
 
 @app.route("/")
 def home():
-    return redirect(url_for("dashboard"))
+    return redirect(url_for("upload_page"))
 
 
 # ---------------------------------
